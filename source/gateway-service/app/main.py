@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import check_database_connection, fetch_event_by_id, fetch_events
 from app.schemas import EventOut, HealthResponse
@@ -10,6 +11,14 @@ from app.schemas import EventOut, HealthResponse
 app = FastAPI(
     title="Gateway Service",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

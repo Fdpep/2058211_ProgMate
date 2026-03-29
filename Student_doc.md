@@ -10,6 +10,32 @@ It consists of multiple containers responsible for data ingestion, processing, s
 
 # CONTAINERS:
 
+## CONTAINER_NAME: simulator
+
+### DESCRIPTION:
+Provides simulated seismic sensors and real-time measurement streams used by the system.
+
+### USER STORIES:
+1, 6
+
+### PORTS:
+8080:8080
+
+### PERSISTENCE EVALUATION
+No persistence required.
+
+### EXTERNAL SERVICES CONNECTIONS
+None.
+
+### MICROSERVICES:
+
+#### MICROSERVICE: simulator
+- TYPE: external service
+- DESCRIPTION: External container providing REST APIs for sensor discovery, WebSocket streams for real-time measurements, and SSE control stream for failure simulation of processing replicas.
+- PORTS: 8080
+
+---
+
 ## CONTAINER_NAME: broker-service
 
 ### DESCRIPTION:
@@ -21,7 +47,7 @@ Receives seismic measurements from the simulator and redistributes them to proce
 ### PORTS:
 8001:8001
 
-### PERSISTANCE EVALUATION
+### PERSISTENCE EVALUATION
 No persistence required.
 
 ### EXTERNAL SERVICES CONNECTIONS
@@ -57,7 +83,7 @@ Performs sliding-window analysis, FFT-based dominant frequency extraction, event
 ### PORTS:
 8101, 8102, 8103
 
-### PERSISTANCE EVALUATION
+### PERSISTENCE EVALUATION
 Stores events in PostgreSQL.
 
 ### EXTERNAL SERVICES CONNECTIONS
@@ -72,7 +98,7 @@ Connects to simulator control stream (SSE) and to PostgreSQL.
 - TECHNOLOGICAL SPECIFICATION:
 Python with FastAPI and NumPy.
 - SERVICE ARCHITECTURE:
-Maintains in-memory windows per sensor, applies FFT on incoming data, classifies events according to dominant frequency, suppresses repeated equivalent detections in memory, persists events in PostgreSQL, and terminates itself when a shutdown command is received from the simulator control stream.
+Maintains in-memory windows per sensor, applies FFT on incoming data, classifies events according to dominant frequency, suppresses repeated equivalent detections in memory, persists events in PostgreSQL, and terminates itself when a shutdown command is received from the simulator control stream. The service ensures idempotent event persistence through deterministic event identifiers and database-level conflict handling.
 
 - ENDPOINTS:
 
@@ -94,7 +120,7 @@ Stores detected events.
 ### PORTS:
 5432:5432
 
-### PERSISTANCE EVALUATION
+### PERSISTENCE EVALUATION
 Persistent storage enabled.
 
 ### EXTERNAL SERVICES CONNECTIONS
@@ -119,12 +145,12 @@ None.
 Provides a single entry point for the frontend and exposes read-only APIs for retrieving detected seismic events from PostgreSQL.
 
 ### USER STORIES:
-2, 3, 4, 15
+1, 2, 3, 4, 15
 
 ### PORTS:
 8000:8000
 
-### PERSISTANCE EVALUATION
+### PERSISTENCE EVALUATION
 No persistence required. The service reads data from PostgreSQL and does not store internal state.
 
 ### EXTERNAL SERVICES CONNECTIONS
@@ -139,7 +165,7 @@ Connects to PostgreSQL.
 - TECHNOLOGICAL SPECIFICATION:
 Python with FastAPI and psycopg2.
 - SERVICE ARCHITECTURE:
-Simple read-only REST service connected to PostgreSQL. It acts as the single backend entry point for the frontend dashboard and supports event filtering by sensor, type, region, and time interval.
+Stateless read-only REST service connected to PostgreSQL. It acts as the single backend entry point required by the system specification and enables fault-tolerant access to detected events independently from processing replicas. It supports event filtering by sensor, type, region, and time interval.
 
 - ENDPOINTS:
 
@@ -148,10 +174,13 @@ Simple read-only REST service connected to PostgreSQL. It acts as the single bac
 | GET | /health | Returns service and database health information | 6 |
 | GET | /events | Returns detected events with optional filtering and pagination | 2, 3, 4 |
 | GET | /events/{event_id} | Returns the details of a specific detected event | 3, 4 |
+
+---
+
 ## CONTAINER_NAME: frontend-dashboard
 
 ### DESCRIPTION:
-Provides real-time visualization of events.
+Provides real-time visualization and historical inspection of detected seismic events through a web dashboard connected to the gateway service.
 
 ### USER STORIES:
 1, 2, 3, 4
@@ -159,21 +188,25 @@ Provides real-time visualization of events.
 ### PORTS:
 3000:3000
 
-### PERSISTANCE EVALUATION
-No persistence.
+### PERSISTENCE EVALUATION
+No persistence required.
 
 ### EXTERNAL SERVICES CONNECTIONS
-Connects to gateway.
+Connects to the gateway service.
 
 ### MICROSERVICES:
 
 #### MICROSERVICE: frontend
 - TYPE: frontend
-- DESCRIPTION: Displays events and filters.
+- DESCRIPTION: Displays the dashboard for seismic event monitoring, filtering, and periodic refresh of detected events.
 - PORTS: 3000
+- TECHNOLOGICAL SPECIFICATION:
+React with Vite, served through Nginx in the container.
+- SERVICE ARCHITECTURE:
+Single-page frontend application that queries the gateway service through REST APIs. It supports event list visualization, filtering by sensor, event type, and region, and periodic polling for near real-time updates.
 
 - PAGES:
 
 | Name | Description | Related Microservice | User Stories |
 |------|------------|----------------------|-------------|
-| Dashboard | Displays events | gateway | 1, 2, 3, 4 |
+| Dashboard | Displays detected events, filtering controls, refresh actions, and historical event inspection in tabular form | gateway | 1, 2, 3, 4 |

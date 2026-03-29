@@ -86,6 +86,16 @@ File esterno, serve a noi sviluppatori per tenere traccia di ciò che è stato f
 - Added /events/{event_id} endpoint for event detail retrieval
 - Added gateway service to Docker Compose as the single backend entry point for the frontend
 
+## Frontend dashboard implementation
+
+- Implemented frontend dashboard with React and Vite
+- Added single dashboard page for seismic event monitoring
+- Added event table showing detected events retrieved from the gateway service
+- Added filtering by sensor_id, event_type, and sensor_region
+- Added periodic REST polling to provide near real-time dashboard updates
+- Added manual refresh action and filter reset action
+- Added frontend service to Docker Compose
+
 ## Struttura cartelle
 
 ### Root repository

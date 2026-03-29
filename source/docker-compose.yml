@@ -126,5 +126,15 @@ services:
       postgres:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ./frontend-dashboard
+    container_name: frontend-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      gateway:
+        condition: service_started
+
 volumes:
   postgres_data:
