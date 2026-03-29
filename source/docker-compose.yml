@@ -110,5 +110,21 @@ services:
       processing-3:
         condition: service_started
 
+  gateway:
+    build:
+      context: ./gateway-service
+    container_name: gateway-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: seismicdb
+      DB_USER: seismic_user
+      DB_PASSWORD: seismic_password
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:

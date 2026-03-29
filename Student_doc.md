@@ -116,7 +116,7 @@ None.
 ## CONTAINER_NAME: gateway-service
 
 ### DESCRIPTION:
-Provides a single entry point for the frontend( still to do ).
+Provides a single entry point for the frontend and exposes read-only APIs for retrieving detected seismic events from PostgreSQL.
 
 ### USER STORIES:
 2, 3, 4, 15
@@ -125,7 +125,7 @@ Provides a single entry point for the frontend( still to do ).
 8000:8000
 
 ### PERSISTANCE EVALUATION
-No persistence.
+No persistence required. The service reads data from PostgreSQL and does not store internal state.
 
 ### EXTERNAL SERVICES CONNECTIONS
 Connects to PostgreSQL.
@@ -134,21 +134,20 @@ Connects to PostgreSQL.
 
 #### MICROSERVICE: gateway
 - TYPE: backend
-- DESCRIPTION: Exposes APIs for event retrieval.
+- DESCRIPTION: Exposes REST APIs for health checks, event list retrieval, filtered event queries, and event detail retrieval.
 - PORTS: 8000
 - TECHNOLOGICAL SPECIFICATION:
-Python FastAPI.
+Python with FastAPI and psycopg2.
 - SERVICE ARCHITECTURE:
-Simple REST service reading from DB.
+Simple read-only REST service connected to PostgreSQL. It acts as the single backend entry point for the frontend dashboard and supports event filtering by sensor, type, region, and time interval.
 
 - ENDPOINTS:
 
 | HTTP METHOD | URL | Description | User Stories |
 | ----------- | --- | ----------- | ------------ |
-| GET | /health | Returns service health information | 6 |
-
----
-
+| GET | /health | Returns service and database health information | 6 |
+| GET | /events | Returns detected events with optional filtering and pagination | 2, 3, 4 |
+| GET | /events/{event_id} | Returns the details of a specific detected event | 3, 4 |
 ## CONTAINER_NAME: frontend-dashboard
 
 ### DESCRIPTION:

@@ -76,6 +76,16 @@ File esterno, serve a noi sviluppatori per tenere traccia di ciò che è stato f
 - Verified that the broker continues redistributing measurements even when one processing replica becomes unreachable
 
 
+## Gateway service implementation
+
+- Implemented gateway service with FastAPI
+- Added PostgreSQL read-only connection for event retrieval
+- Added /health endpoint with database reachability check
+- Added /events endpoint with filtering by sensor_id, event_type, sensor_region, start_time, and end_time
+- Added pagination support through limit and offset query parameters
+- Added /events/{event_id} endpoint for event detail retrieval
+- Added gateway service to Docker Compose as the single backend entry point for the frontend
+
 ## Struttura cartelle
 
 ### Root repository
