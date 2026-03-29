@@ -43,7 +43,7 @@ Single service that manages sensor subscriptions and distributes messages via HT
 ## CONTAINER_NAME: processing-service
 
 ### DESCRIPTION:
-Processes seismic data, performs FFT analysis, classifies events, and stores them.
+Performs sliding-window analysis, FFT-based dominant frequency extraction, event classification, duplicate-safe persistence, and listens to the simulator control stream for shutdown commands.
 
 ### USER STORIES:
 1, 2, 4, 5, 8, 9
@@ -55,7 +55,7 @@ Processes seismic data, performs FFT analysis, classifies events, and stores the
 Stores events in PostgreSQL.
 
 ### EXTERNAL SERVICES CONNECTIONS
-Connects to simulator control stream (SSE).
+Connects to simulator control stream (SSE) and to PostgreSQL.
 
 ### MICROSERVICES:
 

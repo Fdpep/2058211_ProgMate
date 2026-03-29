@@ -39,6 +39,16 @@ File esterno , serve a noi sviluppatori per tenere traccia di cio che è stato f
 - Created three processing replicas in Docker Compose
 
 
+## Fault tolerance integration
+
+- Added simulator service to Docker Compose
+- Added SSE control stream listener to each processing replica
+- Each processing replica connects to /api/control
+- On SHUTDOWN command, the replica terminates itself
+- This behavior implements the failure simulation required by the specification
+
+
+
 ## Struttura cartelle
 
 ### Root repository

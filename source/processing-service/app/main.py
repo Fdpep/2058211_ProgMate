@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 from app.deduplication import EventDeduplicator
+from contextlib import asynccontextmanager
+from app.control_listener import start_control_listener
 
 from fastapi import FastAPI, HTTPException
 
@@ -11,7 +13,17 @@ from app.schemas import MeasurementIn, HealthResponse
 from app.sliding_window import SlidingWindowManager
 
 
-app = FastAPI(title="Processing Service", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_control_listener()
+    yield
+
+
+app = FastAPI(
+    title="Processing Service",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 window_manager = SlidingWindowManager(window_size=WINDOW_SIZE_SAMPLES)
 event_deduplicator = EventDeduplicator(cooldown_seconds=5, frequency_tolerance_hz=0.5)

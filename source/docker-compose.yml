@@ -1,4 +1,10 @@
 services:
+  simulator:
+    image: seismic-signal-simulator:multiarch_v1
+    container_name: seismic-simulator
+    ports:
+      - "8080:8080"
+
   postgres:
     image: postgres:16
     container_name: seismic-postgres
@@ -30,11 +36,14 @@ services:
       REPLICA_ID: processing-1
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8101:8100"
     depends_on:
       postgres:
         condition: service_healthy
+      simulator:
+        condition: service_started
 
   processing-2:
     build:
@@ -49,11 +58,14 @@ services:
       REPLICA_ID: processing-2
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8102:8100"
     depends_on:
       postgres:
         condition: service_healthy
+      simulator:
+        condition: service_started
 
   processing-3:
     build:
@@ -68,11 +80,14 @@ services:
       REPLICA_ID: processing-3
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8103:8100"
     depends_on:
       postgres:
         condition: service_healthy
+      simulator:
+        condition: service_started
 
 volumes:
   postgres_data:
