@@ -89,5 +89,26 @@ services:
       simulator:
         condition: service_started
 
+  broker:
+    build:
+      context: ./broker-service
+    container_name: broker-service
+    environment:
+      SIMULATOR_BASE_URL: http://simulator:8080
+      PROCESSING_REPLICA_1: http://processing-1:8100
+      PROCESSING_REPLICA_2: http://processing-2:8100
+      PROCESSING_REPLICA_3: http://processing-3:8100
+    ports:
+      - "8001:8001"
+    depends_on:
+      simulator:
+        condition: service_started
+      processing-1:
+        condition: service_started
+      processing-2:
+        condition: service_started
+      processing-3:
+        condition: service_started
+
 volumes:
   postgres_data:

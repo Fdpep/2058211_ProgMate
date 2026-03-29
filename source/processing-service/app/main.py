@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
-from app.deduplication import EventDeduplicator
 from contextlib import asynccontextmanager
-from app.control_listener import start_control_listener
 
 from fastapi import FastAPI, HTTPException
 
 from app.classifier import classify_event
 from app.config import REPLICA_ID, SAMPLING_RATE_HZ, WINDOW_SIZE_SAMPLES
+from app.control_listener import start_control_listener
+from app.deduplication import EventDeduplicator
 from app.fft_analysis import extract_dominant_frequency, extract_peak_amplitude
 from app.persistence import generate_event_id, save_event
 from app.schemas import MeasurementIn, HealthResponse
@@ -27,6 +27,7 @@ app = FastAPI(
 
 window_manager = SlidingWindowManager(window_size=WINDOW_SIZE_SAMPLES)
 event_deduplicator = EventDeduplicator(cooldown_seconds=5, frequency_tolerance_hz=0.5)
+
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
@@ -56,6 +57,12 @@ def receive_measurement(measurement: MeasurementIn):
     dominant_frequency_hz = extract_dominant_frequency(samples, SAMPLING_RATE_HZ)
     event_type = classify_event(dominant_frequency_hz)
 
+    print(
+        f"[{REPLICA_ID}] Window analyzed for {measurement.sensor_id}: "
+        f"dominant_frequency_hz={dominant_frequency_hz}, event_type={event_type}",
+        flush=True
+    )
+
     if event_type is None:
         return {
             "status": "accepted",
@@ -75,6 +82,11 @@ def receive_measurement(measurement: MeasurementIn):
     )
 
     if not should_persist_event:
+        print(
+            f"[{REPLICA_ID}] Event suppressed for {measurement.sensor_id}: "
+            f"event_type={event_type}, dominant_frequency_hz={dominant_frequency_hz}",
+            flush=True
+        )
         return {
             "status": "processed",
             "event_detected": True,
@@ -110,7 +122,17 @@ def receive_measurement(measurement: MeasurementIn):
     try:
         inserted = save_event(event_payload)
     except Exception as exc:
+        print(
+            f"[{REPLICA_ID}] Database error for {measurement.sensor_id}: {str(exc)}",
+            flush=True
+        )
         raise HTTPException(status_code=500, detail=f"Database error: {str(exc)}") from exc
+
+    print(
+        f"[{REPLICA_ID}] Event processed for {measurement.sensor_id}: "
+        f"event_type={event_type}, inserted={inserted}, event_id={event_id}",
+        flush=True
+    )
 
     return {
         "status": "processed",

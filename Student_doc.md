@@ -25,7 +25,7 @@ Receives seismic measurements from the simulator and redistributes them to proce
 No persistence required.
 
 ### EXTERNAL SERVICES CONNECTIONS
-Connects to simulator (WebSocket).
+Connects to simulator REST API and sensor WebSocket streams. Connects to processing replicas through HTTP.
 
 ### MICROSERVICES:
 
@@ -34,9 +34,15 @@ Connects to simulator (WebSocket).
 - DESCRIPTION: Connects to sensor streams and forwards data to processing replicas.
 - PORTS: 8001
 - TECHNOLOGICAL SPECIFICATION:
-Implemented in Python using FastAPI and async WebSocket clients.
+Implemented in Python using FastAPI, requests, and async WebSocket clients.
 - SERVICE ARCHITECTURE:
-Single service that manages sensor subscriptions and distributes messages via HTTP.
+Single service that discovers sensors through the simulator API, subscribes to sensor WebSocket streams, and redistributes incoming measurements to all configured processing replicas. It tolerates unreachable replicas without stopping overall operation.
+
+- ENDPOINTS:
+
+| HTTP METHOD | URL | Description | User Stories |
+| ----------- | --- | ----------- | ------------ |
+| GET | /health | Returns broker health information | 6 |
 
 ---
 
@@ -66,13 +72,13 @@ Connects to simulator control stream (SSE) and to PostgreSQL.
 - TECHNOLOGICAL SPECIFICATION:
 Python with FastAPI and NumPy.
 - SERVICE ARCHITECTURE:
-Maintains in-memory windows and applies FFT on incoming data.
+Maintains in-memory windows per sensor, applies FFT on incoming data, classifies events according to dominant frequency, suppresses repeated equivalent detections in memory, persists events in PostgreSQL, and terminates itself when a shutdown command is received from the simulator control stream.
 
 - ENDPOINTS:
 
 | HTTP METHOD | URL | Description | User Stories |
 |------------|-----|------------|-------------|
-| POST | /measurements | Receives sensor data | 1 |
+| POST | /measurements | Receives sensor data from the broker and processes the current sliding window | 1 |
 | GET | /health | Health check | 6 |
 
 ---
@@ -110,7 +116,7 @@ None.
 ## CONTAINER_NAME: gateway-service
 
 ### DESCRIPTION:
-Provides a single entry point for the frontend.
+Provides a single entry point for the frontend( still to do ).
 
 ### USER STORIES:
 2, 3, 4, 15
@@ -140,7 +146,6 @@ Simple REST service reading from DB.
 | HTTP METHOD | URL | Description | User Stories |
 | ----------- | --- | ----------- | ------------ |
 | GET | /health | Returns service health information | 6 |
-| POST | /measurements | Receives sensor measurements from the broker and processes them | 1, 8, 9 |
 
 ---
 
@@ -172,4 +177,4 @@ Connects to gateway.
 
 | Name | Description | Related Microservice | User Stories |
 |------|------------|----------------------|-------------|
-| Dashboard | Displays events | gateway | 1,2,3,4 |
+| Dashboard | Displays events | gateway | 1, 2, 3, 4 |
