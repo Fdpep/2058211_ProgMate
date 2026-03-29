@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: seismic-postgres
+    environment:
+      POSTGRES_DB: seismicdb
+      POSTGRES_USER: seismic_user
+      POSTGRES_PASSWORD: seismic_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seismic_user -d seismicdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  processing-1:
+    build:
+      context: ./processing-service
+    container_name: processing-1
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: seismicdb
+      DB_USER: seismic_user
+      DB_PASSWORD: seismic_password
+      REPLICA_ID: processing-1
+      SAMPLING_RATE_HZ: 20.0
+      WINDOW_SIZE_SECONDS: 5
+    ports:
+      - "8101:8100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  processing-2:
+    build:
+      context: ./processing-service
+    container_name: processing-2
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: seismicdb
+      DB_USER: seismic_user
+      DB_PASSWORD: seismic_password
+      REPLICA_ID: processing-2
+      SAMPLING_RATE_HZ: 20.0
+      WINDOW_SIZE_SECONDS: 5
+    ports:
+      - "8102:8100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  processing-3:
+    build:
+      context: ./processing-service
+    container_name: processing-3
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: seismicdb
+      DB_USER: seismic_user
+      DB_PASSWORD: seismic_password
+      REPLICA_ID: processing-3
+      SAMPLING_RATE_HZ: 20.0
+      WINDOW_SIZE_SECONDS: 5
+    ports:
+      - "8103:8100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
