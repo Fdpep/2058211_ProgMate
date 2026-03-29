@@ -11,6 +11,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [systemStatus, setSystemStatus] = useState(null);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -55,13 +56,30 @@ function App() {
     }
   };
 
+  const fetchSystemStatus = async () => {
+    try {
+      const response = await fetch(`${GATEWAY_BASE_URL}/system/status`);
+
+      if (!response.ok) {
+        throw new Error(`System status error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSystemStatus(data);
+    } catch (err) {
+      console.error(err.message || "Failed to fetch system status.");
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
+    fetchSystemStatus();
   }, [queryString]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchEvents();
+      fetchSystemStatus();
     }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
@@ -81,6 +99,52 @@ function App() {
           Real-time monitoring of detected seismic events retrieved through the gateway service.
         </p>
       </header>
+
+      <section className="status-section">
+        <div>
+          <strong>Dashboard status:</strong> {loading ? "Loading..." : "Idle"}
+        </div>
+        <div>
+          <strong>Events shown:</strong> {events.length}
+        </div>
+        <div>
+          <strong>Last update:</strong>{" "}
+          {lastUpdate ? lastUpdate.toLocaleString() : "Not available"}
+        </div>
+      </section>
+
+      <section className="system-status-section">
+        <h2>System Status</h2>
+
+        {!systemStatus ? (
+          <p>Loading system status...</p>
+        ) : (
+          <>
+            <div>
+              <strong>System:</strong> {systemStatus.status}
+            </div>
+            <div>
+              <strong>Active replicas:</strong>{" "}
+              {systemStatus.active_replicas} / {systemStatus.total_replicas}
+            </div>
+
+            <ul>
+              {Object.entries(systemStatus.replicas).map(([replicaName, replicaState]) => (
+                <li key={replicaName}>
+                  {replicaName} →{" "}
+                  <strong
+                    style={{
+                      color: replicaState === "UP" ? "green" : "red",
+                    }}
+                  >
+                    {replicaState}
+                  </strong>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       <section className="filters-section">
         <div className="filter-group">
@@ -124,19 +188,6 @@ function App() {
           <button onClick={clearFilters} className="secondary-button">
             Clear filters
           </button>
-        </div>
-      </section>
-
-      <section className="status-section">
-        <div>
-          <strong>Status:</strong> {loading ? "Loading..." : "Idle"}
-        </div>
-        <div>
-          <strong>Events shown:</strong> {events.length}
-        </div>
-        <div>
-          <strong>Last update:</strong>{" "}
-          {lastUpdate ? lastUpdate.toLocaleString() : "Not available"}
         </div>
       </section>
 

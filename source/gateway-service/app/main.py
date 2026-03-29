@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from app.replicas import check_replicas_health, compute_system_status
 
 from app.db import check_database_connection, fetch_event_by_id, fetch_events
 from app.schemas import EventOut, HealthResponse
@@ -77,3 +78,20 @@ def get_event_by_id(event_id: str):
         raise HTTPException(status_code=404, detail="Event not found.")
 
     return event
+
+@app.get("/replicas/health")
+def get_replicas_health():
+    return check_replicas_health()
+
+
+@app.get("/system/status")
+def get_system_status():
+    replicas_health = check_replicas_health()
+    system_status = compute_system_status(replicas_health)
+
+    return {
+        "status": system_status,
+        "replicas": replicas_health,
+        "active_replicas": sum(1 for s in replicas_health.values() if s == "UP"),
+        "total_replicas": len(replicas_health),
+    }
