@@ -7,7 +7,12 @@ def extract_dominant_frequency(samples: list[float], sampling_rate_hz: float) ->
 
     signal = np.array(samples, dtype=float)
 
+    # Remove DC component
     signal = signal - np.mean(signal)
+
+    # Apply Hann window 
+    window = np.hanning(len(signal))
+    signal = signal * window
 
     fft_result = np.fft.rfft(signal)
     magnitudes = np.abs(fft_result)
@@ -16,6 +21,7 @@ def extract_dominant_frequency(samples: list[float], sampling_rate_hz: float) ->
     if len(magnitudes) <= 1:
         return 0.0
 
+    # Remove DC bin
     magnitudes[0] = 0.0
 
     dominant_index = int(np.argmax(magnitudes))

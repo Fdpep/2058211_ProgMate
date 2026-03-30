@@ -36,6 +36,8 @@ services:
       REPLICA_ID: processing-1
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
+      LOG_NON_EVENT_WINDOWS: "true"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8101:8100"
@@ -58,6 +60,8 @@ services:
       REPLICA_ID: processing-2
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
+      LOG_NON_EVENT_WINDOWS: "true"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8102:8100"
@@ -80,6 +84,8 @@ services:
       REPLICA_ID: processing-3
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
+      LOG_NON_EVENT_WINDOWS: "true"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8103:8100"
@@ -135,6 +141,17 @@ services:
     depends_on:
       gateway:
         condition: service_started
+
+  demo-injector:
+    build:
+      context: ./demo-injector
+    container_name: demo-injector
+    depends_on:
+      simulator:
+        condition: service_started
+      broker:
+        condition: service_started
+    restart: "no"
 
 volumes:
   postgres_data:

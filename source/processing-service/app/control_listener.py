@@ -24,7 +24,10 @@ def terminate_process() -> None:
 def listen_for_shutdown_commands() -> None:
     while True:
         try:
-            print(f"[{REPLICA_ID}] Connecting to control stream: {SIMULATOR_CONTROL_URL}")
+            print(
+                f"[{REPLICA_ID}] Connecting to control stream: {SIMULATOR_CONTROL_URL}",
+                flush=True
+            )
             response = requests.get(SIMULATOR_CONTROL_URL, stream=True, timeout=60)
             response.raise_for_status()
 
@@ -34,27 +37,28 @@ def listen_for_shutdown_commands() -> None:
                 event_type = getattr(event, "event", None)
                 data = getattr(event, "data", "")
 
-                if not data:
-                    continue
-
-                print(f"[{REPLICA_ID}] Control event received: type={event_type}, data={data}")
-
-                if event_type != "command":
+                if not data or event_type != "command":
                     continue
 
                 try:
                     payload = json.loads(data)
                 except json.JSONDecodeError:
-                    print(f"[{REPLICA_ID}] Invalid command payload received.")
+                    print(f"[{REPLICA_ID}] Invalid command payload received.", flush=True)
                     continue
 
                 if payload.get("command") == "SHUTDOWN":
-                    print(f"[{REPLICA_ID}] Shutdown command received. Terminating replica.")
+                    print(
+                        f"[{REPLICA_ID}] Shutdown command received. Terminating replica.",
+                        flush=True
+                    )
                     terminate_process()
                     return
 
         except Exception as exc:
-            print(f"[{REPLICA_ID}] Control stream error: {exc}. Reconnecting in 3 seconds.")
+            print(
+                f"[{REPLICA_ID}] Control stream error: {exc}. Reconnecting in 3 seconds.",
+                flush=True
+            )
             time.sleep(3)
 
 

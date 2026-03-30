@@ -9,3 +9,11 @@ PROCESSING_REPLICAS = [
     os.getenv("PROCESSING_REPLICA_2", "http://processing-2:8100"),
     os.getenv("PROCESSING_REPLICA_3", "http://processing-3:8100"),
 ]
+
+BROKER_REQUEST_TIMEOUT_SECONDS = float(
+    os.getenv("BROKER_REQUEST_TIMEOUT_SECONDS", "1.5")
+)
+
+BROKER_PARTIAL_FAILURE_LOG_INTERVAL_SECONDS = int(
+    os.getenv("BROKER_PARTIAL_FAILURE_LOG_INTERVAL_SECONDS", "15")
+)

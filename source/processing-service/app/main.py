@@ -4,7 +4,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 
 from app.classifier import classify_event
-from app.config import REPLICA_ID, SAMPLING_RATE_HZ, WINDOW_SIZE_SAMPLES
+from app.config import (
+    REPLICA_ID,
+    SAMPLING_RATE_HZ,
+    WINDOW_SIZE_SAMPLES,
+    LOG_NON_EVENT_WINDOWS,
+)
 from app.control_listener import start_control_listener
 from app.deduplication import EventDeduplicator
 from app.fft_analysis import extract_dominant_frequency, extract_peak_amplitude
@@ -15,6 +20,11 @@ from app.sliding_window import SlidingWindowManager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print(
+        f"[{REPLICA_ID}] Starting processing service "
+        f"(sampling_rate_hz={SAMPLING_RATE_HZ}, window_size_samples={WINDOW_SIZE_SAMPLES})",
+        flush=True
+    )
     start_control_listener()
     yield
 
@@ -57,13 +67,13 @@ def receive_measurement(measurement: MeasurementIn):
     dominant_frequency_hz = extract_dominant_frequency(samples, SAMPLING_RATE_HZ)
     event_type = classify_event(dominant_frequency_hz)
 
-    print(
-        f"[{REPLICA_ID}] Window analyzed for {measurement.sensor_id}: "
-        f"dominant_frequency_hz={dominant_frequency_hz}, event_type={event_type}",
-        flush=True
-    )
-
     if event_type is None:
+        if LOG_NON_EVENT_WINDOWS:
+            print(
+                f"[{REPLICA_ID}] No classified event for {measurement.sensor_id}: "
+                f"dominant_frequency_hz={dominant_frequency_hz:.2f}",
+                flush=True
+            )
         return {
             "status": "accepted",
             "message": "Window analyzed, no classified event generated."
@@ -84,7 +94,7 @@ def receive_measurement(measurement: MeasurementIn):
     if not should_persist_event:
         print(
             f"[{REPLICA_ID}] Event suppressed for {measurement.sensor_id}: "
-            f"event_type={event_type}, dominant_frequency_hz={dominant_frequency_hz}",
+            f"event_type={event_type}, dominant_frequency_hz={dominant_frequency_hz:.2f}",
             flush=True
         )
         return {
@@ -130,7 +140,8 @@ def receive_measurement(measurement: MeasurementIn):
 
     print(
         f"[{REPLICA_ID}] Event processed for {measurement.sensor_id}: "
-        f"event_type={event_type}, inserted={inserted}, event_id={event_id}",
+        f"event_type={event_type}, dominant_frequency_hz={dominant_frequency_hz:.2f}, "
+        f"inserted={inserted}, event_id={event_id}",
         flush=True
     )
 

@@ -21,13 +21,19 @@ async def consume_sensor_stream(sensor: dict) -> None:
 
     websocket_url = f"ws://simulator:8080/api/device/{sensor_id}/ws"
 
-    message_counter = 0  # 👈 per ridurre spam log
-
     while True:
         try:
-            print(f"[broker] Connecting to sensor stream: {sensor_id} -> {websocket_url}", flush=True)
+            print(
+                f"[broker] Connecting to sensor stream: {sensor_id} -> {websocket_url}",
+                flush=True
+            )
 
-            async with websockets.connect(websocket_url) as websocket:
+            async with websockets.connect(
+    websocket_url,
+    ping_interval=20,
+    ping_timeout=60,
+    close_timeout=10,
+) as websocket:
                 print(f"[broker] Connected to sensor stream: {sensor_id}", flush=True)
 
                 while True:
@@ -42,29 +48,12 @@ async def consume_sensor_stream(sensor: dict) -> None:
                         "value": payload["value"],
                     }
 
-                    message_counter += 1
-
-                    # 👇 stampa solo ogni 50 messaggi (evita spam)
-                    if message_counter % 50 == 0:
-                        print(
-                            f"[broker] Received {message_counter} messages from {sensor_id}",
-                            flush=True
-                        )
-
-                    distribution_result = await asyncio.to_thread(
-                        distribute_measurement, measurement
-                    )
-
-                    # 👇 stampa solo se c'è un problema
-                    if any(not r["reachable"] for r in distribution_result.values()):
-                        print(
-                            f"[broker] Partial distribution failure for {sensor_id}: {distribution_result}",
-                            flush=True
-                        )
+                    await asyncio.to_thread(distribute_measurement, measurement)
 
         except Exception as exc:
             print(
-                f"[broker] Sensor stream error for {sensor_id}: {exc}. Reconnecting in 3 seconds.",
+                f"[broker] Sensor stream error for {sensor_id}: {exc}. "
+                f"Reconnecting in 3 seconds.",
                 flush=True
             )
             await asyncio.sleep(3)
@@ -97,6 +86,11 @@ async def start_sensor_consumers() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print(
+        f"[broker] Starting broker service with "
+        f"{len(PROCESSING_REPLICAS)} configured processing replicas.",
+        flush=True
+    )
     asyncio.create_task(start_sensor_consumers())
     yield
 
