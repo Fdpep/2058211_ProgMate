@@ -12,6 +12,8 @@ A gateway service provides a single entry point for the frontend. A frontend das
 
 The system is designed to remain operational even in the presence of partial failures. In particular, processing replicas may be shut down by the simulator control stream, while the broker continues redistributing data to the remaining reachable replicas and the platform continues to provide monitoring capabilities.
 
+In this architecture, the gateway service acts as a read-only entry point for the frontend and does not directly route requests to processing replicas. Fault tolerance and replica selection are handled at the ingestion level by the broker service, which distributes incoming measurements only to reachable replicas. This design choice ensures continuous operation while simplifying frontend interactions.
+
 # USER STORIES:
 
 1) As a command center operator, I want to monitor seismic events in real time, so that I can react immediately to potential threats.
@@ -43,6 +45,16 @@ The system is designed to remain operational even in the presence of partial fai
 14) As an operator, I want the system to continue processing measurements even after a replica shutdown, so that monitoring is uninterrupted.
 
 15) As a user, I want to access backend data through a single entry point, so that interaction with the system is consistent and simplified.
+
+16) As a system operator, I want to monitor the health of processing replicas, so that I can detect failures and understand the current system state.
+    
+17) As a system operator, I want the system to automatically exclude unreachable processing replicas during data distribution, so that the platform continues operating despite partial failures.
+    
+18) As a system operator, I want to validate the system using controlled event injection, so that I can test detection, classification, and persistence end-to-end.
+    
+19) As an analyst, I want to view which replica detected each event, so that I can analyze how events are processed across the distributed system.
+    
+20) As an operator, I want the system to handle irregular or missing sensor data gracefully, so that frequency analysis remains reliable even in non-ideal streaming conditions.
 
 # STANDARD EVENT SCHEMA:
 
@@ -79,6 +91,7 @@ The system applies the following operational rules:
 - The sampling rate is 20 Hz.
 - Each complete window contains 100 samples.
 - FFT analysis is performed only when the window for a sensor is full.
+- The sliding window advances sample-by-sample (overlapping window), ensuring continuous analysis of the incoming data stream.
 
 ## Event classification
 
@@ -89,6 +102,12 @@ The dominant frequency extracted from the FFT is used to classify events accordi
 - Nuclear-like event: `f >= 8.0 Hz`
 
 If the dominant frequency is below `0.5 Hz`, no event is generated.
+
+## Simulator behavior note
+
+In normal operating conditions, the simulator often produces low-frequency signals (e.g., around 0.2 Hz or 0.4 Hz), which fall below the minimum classification threshold. As a result, the system may not generate detectable events unless higher-frequency disturbances occur.
+
+To support validation and demonstration of the system, controlled event injection can be performed using the simulator administrative endpoints.
 
 ## Duplicate-safe persistence
 
@@ -110,3 +129,9 @@ If the dominant frequency is below `0.5 Hz`, no event is generated.
 - The gateway service is the single backend entry point exposed to the frontend dashboard.
 - The frontend retrieves detected events through the gateway service.
 - The dashboard supports near real-time monitoring through periodic polling and allows historical inspection through filtering.
+
+## Validation and testing
+
+The simulator provides administrative endpoints that allow controlled injection of seismic events. These endpoints are used exclusively for validation and demonstration purposes, enabling end-to-end verification of detection, classification, persistence, and visualization.
+
+These mechanisms do not alter the core processing logic and are not required for normal system operation.
