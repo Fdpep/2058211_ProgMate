@@ -49,6 +49,18 @@ services:
         condition: service_healthy
       simulator:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=3)"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   processing-2:
     build:
@@ -76,6 +88,18 @@ services:
         condition: service_healthy
       simulator:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=3)"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   processing-3:
     build:
@@ -103,6 +127,18 @@ services:
         condition: service_healthy
       simulator:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=3)"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   broker:
     build:
@@ -123,13 +159,13 @@ services:
       simulator:
         condition: service_started
       processing-1:
-        condition: service_started
+        condition: service_healthy
       processing-2:
-        condition: service_started
+        condition: service_healthy
       processing-3:
-        condition: service_started
+        condition: service_healthy
 
-  gateway:          
+  gateway:
     build:
       context: ./gateway-service
     container_name: gateway-service
