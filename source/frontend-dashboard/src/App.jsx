@@ -8,10 +8,19 @@ function App() {
   const [sensorId, setSensorId] = useState("");
   const [eventType, setEventType] = useState("");
   const [sensorRegion, setSensorRegion] = useState("");
+
+  const [limit, setLimit] = useState(25);
+  const [page, setPage] = useState(1);
+  const [sortOrder, setSortOrder] = useState("desc");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastUpdate, setLastUpdate] = useState(null);
   const [systemStatus, setSystemStatus] = useState(null);
+
+  const offset = useMemo(() => {
+    return (page - 1) * limit;
+  }, [page, limit]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -28,11 +37,11 @@ function App() {
       params.append("sensor_region", sensorRegion.trim());
     }
 
-    params.append("limit", "100");
-    params.append("offset", "0");
+    params.append("limit", String(limit));
+    params.append("offset", String(offset));
 
     return params.toString();
-  }, [sensorId, eventType, sensorRegion]);
+  }, [sensorId, eventType, sensorRegion, limit, offset]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -47,7 +56,14 @@ function App() {
       }
 
       const data = await response.json();
-      setEvents(data);
+
+      const sortedData = [...data].sort((a, b) => {
+        const dateA = new Date(a.detected_at).getTime();
+        const dateB = new Date(b.detected_at).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      });
+
+      setEvents(sortedData);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err.message || "Failed to fetch events.");
@@ -74,7 +90,7 @@ function App() {
   useEffect(() => {
     fetchEvents();
     fetchSystemStatus();
-  }, [queryString]);
+  }, [queryString, sortOrder]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -83,12 +99,25 @@ function App() {
     }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
-  }, [queryString]);
+  }, [queryString, sortOrder]);
 
   const clearFilters = () => {
     setSensorId("");
     setEventType("");
     setSensorRegion("");
+    setLimit(25);
+    setPage(1);
+    setSortOrder("desc");
+  };
+
+  const goToNextPage = () => {
+    if (events.length === limit) {
+      setPage((prev) => prev + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    setPage((prev) => Math.max(1, prev - 1));
   };
 
   return (
@@ -105,7 +134,10 @@ function App() {
           <strong>Dashboard status:</strong> {loading ? "Loading..." : "Idle"}
         </div>
         <div>
-          <strong>Events shown:</strong> {events.length}
+          <strong>Events shown in page:</strong> {events.length}
+        </div>
+        <div>
+          <strong>Current page:</strong> {page}
         </div>
         <div>
           <strong>Last update:</strong>{" "}
@@ -153,7 +185,10 @@ function App() {
             id="sensorId"
             type="text"
             value={sensorId}
-            onChange={(e) => setSensorId(e.target.value)}
+            onChange={(e) => {
+              setSensorId(e.target.value);
+              setPage(1);
+            }}
             placeholder="e.g. sensor-12"
           />
         </div>
@@ -163,7 +198,10 @@ function App() {
           <select
             id="eventType"
             value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
+            onChange={(e) => {
+              setEventType(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="">All</option>
             <option value="earthquake">earthquake</option>
@@ -178,9 +216,41 @@ function App() {
             id="sensorRegion"
             type="text"
             value={sensorRegion}
-            onChange={(e) => setSensorRegion(e.target.value)}
-            placeholder="e.g. Replica Datacenter"
+            onChange={(e) => {
+              setSensorRegion(e.target.value);
+              setPage(1);
+            }}
+            placeholder="e.g. north-zone"
           />
+        </div>
+
+        <div className="filter-group">
+          <label htmlFor="limit">Rows per page</label>
+          <select
+            id="limit"
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label htmlFor="sortOrder">Order</label>
+          <select
+            id="sortOrder"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+          >
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
         </div>
 
         <div className="actions-group">
@@ -226,14 +296,30 @@ function App() {
                   <td>{event.sensor_name}</td>
                   <td>{event.sensor_region}</td>
                   <td>{event.event_type}</td>
-                  <td>{event.dominant_frequency_hz.toFixed(2)}</td>
-                  <td>{event.peak_amplitude.toFixed(4)}</td>
+                  <td>{Number(event.dominant_frequency_hz).toFixed(2)}</td>
+                  <td>{Number(event.peak_amplitude).toFixed(4)}</td>
                   <td>{event.replica_id}</td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+      </section>
+
+      <section
+        className="pagination-section"
+      >
+        <button onClick={goToPreviousPage} disabled={page === 1}>
+          Previous
+        </button>
+
+        <span>
+          Page <strong>{page}</strong>
+        </span>
+
+        <button onClick={goToNextPage} disabled={events.length < limit}>
+          Next
+        </button>
       </section>
     </div>
   );

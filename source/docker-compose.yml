@@ -94,7 +94,7 @@ services:
       EVENT_DEDUP_COOLDOWN_SECONDS: 20
       MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
       MIN_CLASSIFIABLE_PEAK_MAGNITUDE: 1.0
-      LOG_NON_EVENT_WINDOWS: "true"
+      LOG_NON_EVENT_WINDOWS: "false"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8103:8100"
