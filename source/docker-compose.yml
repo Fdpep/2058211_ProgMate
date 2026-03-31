@@ -36,7 +36,10 @@ services:
       REPLICA_ID: processing-1
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      ANALYSIS_STRIDE_SAMPLES: 10
+      EVENT_DEDUP_COOLDOWN_SECONDS: 20
       MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
+      MIN_CLASSIFIABLE_PEAK_MAGNITUDE: 1.0
       LOG_NON_EVENT_WINDOWS: "false"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
@@ -60,7 +63,10 @@ services:
       REPLICA_ID: processing-2
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      ANALYSIS_STRIDE_SAMPLES: 10
+      EVENT_DEDUP_COOLDOWN_SECONDS: 20
       MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
+      MIN_CLASSIFIABLE_PEAK_MAGNITUDE: 1.0
       LOG_NON_EVENT_WINDOWS: "false"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
@@ -84,7 +90,10 @@ services:
       REPLICA_ID: processing-3
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
+      ANALYSIS_STRIDE_SAMPLES: 10
+      EVENT_DEDUP_COOLDOWN_SECONDS: 20
       MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
+      MIN_CLASSIFIABLE_PEAK_MAGNITUDE: 1.0
       LOG_NON_EVENT_WINDOWS: "true"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
@@ -104,6 +113,10 @@ services:
       PROCESSING_REPLICA_1: http://processing-1:8100
       PROCESSING_REPLICA_2: http://processing-2:8100
       PROCESSING_REPLICA_3: http://processing-3:8100
+      BROKER_REQUEST_TIMEOUT_SECONDS: 1.0
+      BROKER_QUEUE_MAXSIZE: 20000
+      BROKER_WORKER_COUNT: 16
+      BROKER_REPLICA_RETRY_AFTER_SECONDS: 10
     ports:
       - "8001:8001"
     depends_on:

@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
 
@@ -8,13 +8,17 @@ from app.config import (
     REPLICA_ID,
     SAMPLING_RATE_HZ,
     WINDOW_SIZE_SAMPLES,
+    ANALYSIS_STRIDE_SAMPLES,
+    EVENT_DEDUP_COOLDOWN_SECONDS,
+    MIN_CLASSIFIABLE_FREQUENCY_HZ,
+    MIN_CLASSIFIABLE_PEAK_MAGNITUDE,
     LOG_NON_EVENT_WINDOWS,
 )
 from app.control_listener import start_control_listener
 from app.deduplication import EventDeduplicator
-from app.fft_analysis import extract_dominant_frequency, extract_peak_amplitude
+from app.fft_analysis import analyze_frequency_spectrum, extract_peak_amplitude
 from app.persistence import generate_event_id, save_event
-from app.schemas import MeasurementIn, HealthResponse
+from app.schemas import HealthResponse, MeasurementIn
 from app.sliding_window import SlidingWindowManager
 
 
@@ -22,7 +26,9 @@ from app.sliding_window import SlidingWindowManager
 async def lifespan(app: FastAPI):
     print(
         f"[{REPLICA_ID}] Starting processing service "
-        f"(sampling_rate_hz={SAMPLING_RATE_HZ}, window_size_samples={WINDOW_SIZE_SAMPLES})",
+        f"(sampling_rate_hz={SAMPLING_RATE_HZ}, "
+        f"window_size_samples={WINDOW_SIZE_SAMPLES}, "
+        f"analysis_stride_samples={ANALYSIS_STRIDE_SAMPLES})",
         flush=True
     )
     start_control_listener()
@@ -35,13 +41,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-window_manager = SlidingWindowManager(window_size=WINDOW_SIZE_SAMPLES)
-event_deduplicator = EventDeduplicator(cooldown_seconds=5, frequency_tolerance_hz=0.5)
+window_manager = SlidingWindowManager(
+    window_size=WINDOW_SIZE_SAMPLES,
+    analysis_stride=ANALYSIS_STRIDE_SAMPLES,
+)
+event_deduplicator = EventDeduplicator(
+    cooldown_seconds=EVENT_DEDUP_COOLDOWN_SECONDS,
+    frequency_tolerance_hz=0.8
+)
 
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
     return HealthResponse(status="ok", replica_id=REPLICA_ID)
+
 
 @app.get("/runtime-info")
 def runtime_info():
@@ -50,8 +63,10 @@ def runtime_info():
         "replica_id": REPLICA_ID,
         "sampling_rate_hz": SAMPLING_RATE_HZ,
         "window_size_samples": WINDOW_SIZE_SAMPLES,
+        "analysis_stride_samples": ANALYSIS_STRIDE_SAMPLES,
         "tracked_sensors": len(window_manager.windows),
     }
+
 
 @app.post("/measurements")
 def receive_measurement(measurement: MeasurementIn):
@@ -70,17 +85,43 @@ def receive_measurement(measurement: MeasurementIn):
             "message": "Measurement stored, window not ready yet."
         }
 
+    if not window_manager.should_analyze(measurement.sensor_id):
+        return {
+            "status": "accepted",
+            "message": "Measurement stored, analysis deferred by stride policy."
+        }
+
     window = window_manager.get_window(measurement.sensor_id)
     samples = [item["value"] for item in window]
 
-    dominant_frequency_hz = extract_dominant_frequency(samples, SAMPLING_RATE_HZ)
-    event_type = classify_event(dominant_frequency_hz)
+    spectrum = analyze_frequency_spectrum(
+        samples,
+        SAMPLING_RATE_HZ,
+        min_classifiable_frequency_hz=MIN_CLASSIFIABLE_FREQUENCY_HZ,
+    )
+
+    overall_dominant_frequency_hz = spectrum["overall_dominant_frequency_hz"]
+    dominant_frequency_hz = spectrum["classifiable_dominant_frequency_hz"]
+    signal_rms = spectrum["signal_rms"]
+    classifiable_peak_magnitude = spectrum["classifiable_peak_magnitude"]
+
+    event_type = None
+    if (
+        dominant_frequency_hz >= MIN_CLASSIFIABLE_FREQUENCY_HZ
+        and classifiable_peak_magnitude >= MIN_CLASSIFIABLE_PEAK_MAGNITUDE
+    ):
+        event_type = classify_event(dominant_frequency_hz)
+
+    window_manager.mark_analyzed(measurement.sensor_id)
 
     if event_type is None:
         if LOG_NON_EVENT_WINDOWS:
             print(
                 f"[{REPLICA_ID}] No classified event for {measurement.sensor_id}: "
-                f"dominant_frequency_hz={dominant_frequency_hz:.2f}",
+                f"overall_dominant_frequency_hz={overall_dominant_frequency_hz:.2f}, "
+                f"classifiable_dominant_frequency_hz={dominant_frequency_hz:.2f}, "
+                f"filtered_signal_rms={signal_rms:.4f}, "
+                f"classifiable_peak_magnitude={classifiable_peak_magnitude:.4f}",
                 flush=True
             )
         return {
@@ -101,11 +142,6 @@ def receive_measurement(measurement: MeasurementIn):
     )
 
     if not should_persist_event:
-        print(
-            f"[{REPLICA_ID}] Event suppressed for {measurement.sensor_id}: "
-            f"event_type={event_type}, dominant_frequency_hz={dominant_frequency_hz:.2f}",
-            flush=True
-        )
         return {
             "status": "processed",
             "event_detected": True,
