@@ -3,7 +3,11 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from app.replicas import check_replicas_health, compute_system_status
+from app.replicas import (
+    check_replicas_health,
+    compute_system_status,
+    fetch_runtime_info_from_available_replica,
+)
 
 from app.db import check_database_connection, fetch_event_by_id, fetch_events
 from app.schemas import EventOut, HealthResponse
@@ -95,3 +99,15 @@ def get_system_status():
         "active_replicas": sum(1 for s in replicas_health.values() if s == "UP"),
         "total_replicas": len(replicas_health),
     }
+
+@app.get("/processing/runtime")
+def get_processing_runtime():
+    runtime_info = fetch_runtime_info_from_available_replica()
+
+    if runtime_info is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No processing replicas are currently available."
+        )
+
+    return runtime_info

@@ -1,10 +1,6 @@
 import requests
 
-PROCESSING_REPLICAS = [
-    "http://processing-1:8100",
-    "http://processing-2:8100",
-    "http://processing-3:8100",
-]
+from app.config import PROCESSING_REPLICAS
 
 
 def check_replicas_health(timeout: float = 1.0):
@@ -33,3 +29,32 @@ def compute_system_status(health_map: dict):
         return "DOWN"
     else:
         return "DEGRADED"
+
+
+def get_first_available_replica(timeout: float = 1.0):
+    for replica in PROCESSING_REPLICAS:
+        try:
+            response = requests.get(f"{replica}/health", timeout=timeout)
+            if response.status_code == 200:
+                return replica
+        except Exception:
+            continue
+    return None
+
+
+def fetch_runtime_info_from_available_replica(timeout: float = 1.0):
+    for replica in PROCESSING_REPLICAS:
+        try:
+            health_response = requests.get(f"{replica}/health", timeout=timeout)
+            if health_response.status_code != 200:
+                continue
+
+            runtime_response = requests.get(f"{replica}/runtime-info", timeout=timeout)
+            if runtime_response.status_code == 200:
+                payload = runtime_response.json()
+                payload["served_by"] = replica
+                return payload
+        except Exception:
+            continue
+
+    return None

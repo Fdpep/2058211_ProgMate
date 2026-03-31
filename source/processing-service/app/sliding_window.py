@@ -19,8 +19,8 @@ class SlidingWindowManager:
 
             delta = (current_timestamp - last_timestamp).total_seconds()
 
-            # Se il gap è troppo grande → reset finestra
-            if delta > 0.1:  # ~2x sampling interval (20Hz → 0.05s)
+            # Reset solo se il gap è davvero anomalo
+            if delta > 0.5:
                 window.clear()
 
         window.append(measurement)

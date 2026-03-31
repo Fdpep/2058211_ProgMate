@@ -43,6 +43,15 @@ event_deduplicator = EventDeduplicator(cooldown_seconds=5, frequency_tolerance_h
 def health_check():
     return HealthResponse(status="ok", replica_id=REPLICA_ID)
 
+@app.get("/runtime-info")
+def runtime_info():
+    return {
+        "status": "ok",
+        "replica_id": REPLICA_ID,
+        "sampling_rate_hz": SAMPLING_RATE_HZ,
+        "window_size_samples": WINDOW_SIZE_SAMPLES,
+        "tracked_sensors": len(window_manager.windows),
+    }
 
 @app.post("/measurements")
 def receive_measurement(measurement: MeasurementIn):

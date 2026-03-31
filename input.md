@@ -64,7 +64,7 @@ Each detected event follows the following structure:
 - `sensor_id`: unique identifier of the sensor
 - `sensor_name`: human-readable sensor name
 - `sensor_region`: region or area associated with the sensor
-- `event_type`: classified event type (`earthquake`, `conventional_explosion`, `nuclear_like_event`)
+- `event_type`: classified event type (`earthquake`, `conventional_explosion`, `nuclear_like`)
 - `dominant_frequency_hz`: dominant frequency extracted from the current analysis window
 - `peak_amplitude`: maximum absolute amplitude observed in the current window
 - `window_start`: timestamp of the first sample in the analyzed window

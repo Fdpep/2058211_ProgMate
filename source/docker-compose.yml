@@ -37,7 +37,7 @@ services:
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
       MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
-      LOG_NON_EVENT_WINDOWS: "true"
+      LOG_NON_EVENT_WINDOWS: "false"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8101:8100"
@@ -61,7 +61,7 @@ services:
       SAMPLING_RATE_HZ: 20.0
       WINDOW_SIZE_SECONDS: 5
       MIN_CLASSIFIABLE_FREQUENCY_HZ: 0.5
-      LOG_NON_EVENT_WINDOWS: "true"
+      LOG_NON_EVENT_WINDOWS: "false"
       SIMULATOR_CONTROL_URL: http://simulator:8080/api/control
     ports:
       - "8102:8100"
@@ -116,7 +116,7 @@ services:
       processing-3:
         condition: service_started
 
-  gateway:
+  gateway:          
     build:
       context: ./gateway-service
     container_name: gateway-service
@@ -126,6 +126,9 @@ services:
       DB_NAME: seismicdb
       DB_USER: seismic_user
       DB_PASSWORD: seismic_password
+      PROCESSING_REPLICA_1: http://processing-1:8100
+      PROCESSING_REPLICA_2: http://processing-2:8100
+      PROCESSING_REPLICA_3: http://processing-3:8100
     ports:
       - "8000:8000"
     depends_on:
@@ -141,17 +144,6 @@ services:
     depends_on:
       gateway:
         condition: service_started
-
-  demo-injector:
-    build:
-      context: ./demo-injector
-    container_name: demo-injector
-    depends_on:
-      simulator:
-        condition: service_started
-      broker:
-        condition: service_started
-    restart: "no"
 
 volumes:
   postgres_data:

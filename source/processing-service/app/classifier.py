@@ -9,6 +9,6 @@ def classify_event(dominant_frequency_hz: float) -> str | None:
         return "conventional_explosion"
 
     if dominant_frequency_hz >= 8.0:
-        return "nuclear_like_event"
+        return "nuclear_like"
 
     return None

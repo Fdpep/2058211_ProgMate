@@ -168,7 +168,7 @@ function App() {
             <option value="">All</option>
             <option value="earthquake">earthquake</option>
             <option value="conventional_explosion">conventional_explosion</option>
-            <option value="nuclear_like_event">nuclear_like_event</option>
+            <option value="nuclear_like">nuclear_like</option>
           </select>
         </div>
 
