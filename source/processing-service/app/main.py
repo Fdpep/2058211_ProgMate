@@ -47,7 +47,7 @@ window_manager = SlidingWindowManager(
 )
 event_deduplicator = EventDeduplicator(
     cooldown_seconds=EVENT_DEDUP_COOLDOWN_SECONDS,
-    frequency_tolerance_hz=0.8
+    frequency_tolerance_hz=2.0
 )
 
 
